@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>IT PMO Projects</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+
+:root{
+  --primary-blue:#4169E1;
+  --bg-light:#F8F9FC;
+  --text-dark:#1A1D2E;
+  --text-muted:#6B7280;
+  --border-color:#E5E7EB;
+  --white:#FFFFFF;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.05);
+  --shadow-md:0 4px 12px rgba(0,0,0,.08);
+  --shadow-lg:0 10px 30px rgba(0,0,0,.10);
+  --stat-blue-bg:#EBF4FF;
+  --stat-green-bg:#D1FAE5;
+  --stat-orange-bg:#FEF3C7;
+  --stat-purple-bg:#EDE9FE;
+  --green:#22c55e;
+  --yellow:#f59e0b;
+  --red:#ef4444;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+  background:var(--bg-light);
+  color:var(--text-dark);
+}
+.embed-wrap{ max-width:1180px; margin:0 auto; padding:16px; }
+.header{ margin-bottom:16px; }
+.header-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+.header h2{ font-family:'Sora',sans-serif; font-size:26px; margin:0; }
+.header p{ margin:6px 0 0; color:var(--text-muted); }
+.header-actions{ display:flex; gap:10px; flex-wrap:wrap; }
+.btn{
+  padding:10px 14px;
+  border-radius:10px;
+  font-size:14px;
+  font-weight:700;
+  cursor:pointer;
+  border:none;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+.btn-secondary{ background:var(--white); color:var(--text-dark); border:1px solid var(--border-color); }
+.btn-secondary:hover{ background:var(--bg-light); }
+.btn-primary{ background:var(--primary-blue); color:#fff; }
+.btn-primary:hover{ background:#3557CC; }
+.section-card{
+  background:var(--white);
+  border:1px solid var(--border-color);
+  border-radius:14px;
+  box-shadow:var(--shadow-sm);
+  padding:16px;
+}
+.filters-bar{ display:flex; gap:10px; flex-wrap:wrap; margin:14px 0; }
+.filter-btn{
+  padding:8px 12px;
+  border:1px solid var(--border-color);
+  background:var(--white);
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:700;
+}
+.filter-btn.active{ background:var(--primary-blue); color:#fff; border-color:var(--primary-blue); }
+
+.projects-list{ display:grid; gap:14px; }
+.project-item{
+  background:var(--white);
+  border:1px solid var(--border-color);
+  border-radius:14px;
+  padding:16px;
+  box-shadow:var(--shadow-sm);
+}
+.project-header{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+.project-number{ font-size:13px; color:var(--primary-blue); font-weight:800; margin-bottom:4px; }
+.project-name{ font-family:'Sora',sans-serif; font-size:18px; font-weight:800; margin:0 0 2px; }
+.project-client{ color:var(--text-muted); font-size:13px; }
+.project-description{ color:var(--text-muted); font-size:13px; margin-top:10px; }
+.project-meta{ display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--text-muted); margin-top:10px; }
+.meta-item{ display:flex; gap:6px; align-items:center; }
+.project-status{ padding:4px 10px; border-radius:999px; font-size:12px; font-weight:900; text-transform:uppercase; white-space:nowrap; }
+.status-not-started{ background:#dbeafe; color:#1e40af; }
+.status-ongoing{ background:#fef3c7; color:#92400e; }
+.status-on-hold{ background:#ffedd5; color:#9a3412; }
+.status-cancelled{ background:#fee2e2; color:#991b1b; }
+.status-delayed{ background:#f3f4f6; color:#374151; }
+.status-completed{ background:#dcfce7; color:#166534; }
+
+.progress-bar{ height:8px; background:var(--bg-light); border-radius:999px; overflow:hidden; margin-top:10px; }
+.progress-fill{ height:100%; background:linear-gradient(90deg,var(--primary-blue),#5B8DEE); }
+
+.empty-state{ text-align:center; padding:44px 14px; }
+.empty-icon{ font-size:48px; opacity:.25; margin-bottom:8px; }
+.empty-text{ color:var(--text-muted); }
+
+.modal-backdrop{
+  position:fixed; inset:0; background:rgba(0,0,0,.35);
+  display:none; align-items:center; justify-content:center;
+  padding:18px; z-index:9999;
+}
+.modal-backdrop.show{ display:flex; }
+.modal{
+  width:min(720px,100%);
+  background:var(--white);
+  border:1px solid var(--border-color);
+  border-radius:14px;
+  box-shadow:var(--shadow-lg);
+  padding:16px;
+}
+.modal h3{ margin:0 0 10px; font-family:'Sora',sans-serif; }
+.modal .row{ display:grid; gap:12px; grid-template-columns:1fr 1fr; }
+.modal label{ display:block; margin:10px 0 6px; font-size:12px; font-weight:800; color:var(--text-muted); }
+.modal input, .modal select, .modal textarea{
+  width:100%;
+  padding:10px 12px;
+  border:1px solid var(--border-color);
+  border-radius:10px;
+}
+.modal textarea{ resize:vertical; min-height:72px; }
+.modal-footer{ display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; margin-top:12px; }
+@media (max-width:720px){ .modal .row{ grid-template-columns:1fr; } }
+
+
+  </style>
+</head>
+<body>
+  <div class="embed-wrap">
+<header class="header">
+          <div class="header-top">
+            <div>
+              <h2>Projects</h2>
+              <p>Create, edit, and manage your projects</p>
+            </div>
+            <div class="header-actions">
+              <button class="btn btn-primary" id="projects-add-btn"><span>➕</span><span>New Project</span></button>
+            </div>
+          </div>
+        </header>
+
+        <div class="filters-bar" id="projects-admin-filters">
+          <button class="filter-btn active" data-project-filter="all" type="button">All</button>
+          <button class="filter-btn" data-project-filter="Not Started" type="button">Not Started</button>
+          <button class="filter-btn" data-project-filter="Ongoing" type="button">Ongoing</button>
+          <button class="filter-btn" data-project-filter="On-hold" type="button">On-hold</button>
+          <button class="filter-btn" data-project-filter="Delayed" type="button">Delayed</button>
+          <button class="filter-btn" data-project-filter="Cancelled" type="button">Cancelled</button>
+          <button class="filter-btn" data-project-filter="Completed" type="button">Completed</button>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">
+            <h3 class="section-title"><span>📁</span><span>Project List</span></h3>
+          </div>
+          <div class="projects-list" id="projects-admin-container"></div>
+        </div>
+  </div>
+
+  <script>
+/***********************
+     * Google Sheets storage layer (Apps Script Web App)
+     * Replace API_URL with your deployed Apps Script Web App URL
+     ***********************/
+    const API_URL = "https://script.google.com/macros/s/AKfycbxUzc1tDAQnfK1NPN2xR_hrfe8NmzSRy10Au9uHLsYLfeV4zum7HclEjEm3FmUO_e_s/exec";
+
+    // In-memory state (same variables used throughout the app)
+    let projects = [];
+    let tasks = [];
+    let settings = { userName:"", userInitials:"", defaultDRI:"", defaultTech:"" };
+    let counters = { PRJ:0, GR:0, IT:0, AP:0 };
+
+    async function apiGet(params = {}) {
+      const url = new URL(API_URL);
+      Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, v));
+      const res = await fetch(url.toString(), { method: "GET" });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.message || "API error");
+      return json.data;
+    }
+
+    async function apiPost(body = {}) {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(body)
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.message || "API error");
+      return json.data;
+    }
+
+    async function loadAll() {
+      const data = await apiGet({ action: "readAll" });
+      projects = Array.isArray(data.projects) ? data.projects : [];
+      tasks = Array.isArray(data.tasks) ? data.tasks : [];
+      settings = data.settings || settings;
+      counters = data.counters || counters;
+    }
+
+    // Save full state (simple + reliable)
+    async function persistAll() {
+      await apiPost({
+        action: "saveAll",
+        projects,
+        tasks,
+        settings,
+        counters
+      });
+    }
+
+/***********************
+     * Project Number Generation
+     ***********************/
+    function generateProjectNumber(type) {
+      counters[type] = (counters[type] || 0) + 1;
+      
+      if (type === "PRJ") {
+        const year = new Date().getFullYear();
+        const num = String(counters[type]).padStart(3, '0');
+        return `PRJ-${year}-${num}`;
+      } else {
+        const num = String(counters[type]).padStart(3, '0');
+        return `${type}-${num}`;
+      }
+    }
+
+/***********************
+     * Helpers
+     ***********************/
+    function todayISO() {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function isOverdue(task) { return !task.completed && task.dueDate < todayISO(); }
+    function isDueToday(task) { return task.dueDate === todayISO(); }
+
+    function fmtDate(iso) {
+      if (!iso) return "—";
+      return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    }
+
+    function safeText(v) { return (v ?? "").toString(); }
+
+    function statusSlug(status) {
+      return String(status || "")
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9\-]/g, "");
+    }
+
+    function normalizeProjectStatus(raw) {
+      const s = String(raw || "").toLowerCase().trim();
+      if (s === "active" || s === "in progress") return "Ongoing";
+      if (s === "pending") return "Not Started";
+      if (s === "on hold" || s === "on-hold" || s === "hold") return "On-hold";
+      if (s === "cancelled" || s === "canceled" || s === "cancel") return "Cancelled";
+      if (s === "delayed" || s === "delay") return "Delayed";
+      if (s === "completed" || s === "done") return "Completed";
+      if (s === "not started" || s === "not-started") return "Not Started";
+      if (s === "ongoing") return "Ongoing";
+      return raw ? String(raw) : "Not Started";
+    }
+
+
+    function initialsFromName(name) {
+      const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+      if (!parts.length) return "";
+      const first = parts[0]?.[0] || "";
+      const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] || "") : "";
+      return (first + last).toUpperCase();
+    }
+
+    function ensureValidData() {
+      if (!Array.isArray(projects)) projects = [];
+      if (!Array.isArray(tasks)) tasks = [];
+
+      // Normalize / backfill project fields
+      projects = projects.map(p => ({
+        ...p,
+        status: normalizeProjectStatus(p.status),
+        priority: p.priority || "Medium",
+        requestor: p.requestor || "",
+        milestonesSummary: p.milestonesSummary || ""
+      }));
+
+      // Normalize / backfill task fields + drop tasks referencing missing projects
+      const projectIds = new Set(projects.map(p => p.id));
+      tasks = tasks
+        .filter(t => projectIds.has(t.projectId))
+        .map(t => ({ ...t, type: t.type || "Task" }));
+    }
+
+    function syncSidebarUser() {
+      const nameEl = document.getElementById("userNameDisplay");
+      const avatarEl = document.getElementById("userAvatarDisplay");
+
+      const nm = settings.userName || "";
+      const init = settings.userInitials || initialsFromName(nm) || "";
+
+      if (nameEl) nameEl.textContent = nm;
+      if (avatarEl) avatarEl.textContent = init;
+    }
+
+    function buildHoverTasksHTML(projectId) {
+      const project = projects.find(p => p.id === projectId);
+      const projectNumber = project ? project.projectNumber : "";
+      
+      const list = tasks
+        .filter(t => t.projectId === projectId)
+        .sort((a,b) => (a.dueDate > b.dueDate ? 1 : -1))
+        .slice(0, 3);
+
+      if (!list.length) {
+        return `
+          <div class="project-hover-tasks">
+            <div class="hover-title">Tasks preview ${projectNumber ? `(${projectNumber})` : ''}</div>
+            <div class="hover-task"><span>No tasks yet</span><span></span></div>
+          </div>`;
+      }
+
+      return `
+        <div class="project-hover-tasks">
+          <div class="hover-title">Tasks preview ${projectNumber ? `(${projectNumber})` : ''}</div>
+          ${list.map(t => `
+            <div class="hover-task">
+              <span><strong>${t.completed ? "✓" : "•"}</strong> ${safeText(t.title)}</span>
+              <span>${fmtDate(t.dueDate)}</span>
+            </div>
+          `).join("")}
+        </div>`;
+    }
+
+/***********************
+     * Google Sheets storage layer (Apps Script Web App)
+     * Replace API_URL with your deployed Apps Script Web App URL
+     ***********************/
+    const API_URL = "https://script.google.com/macros/s/AKfycbxUzc1tDAQnfK1NPN2xR_hrfe8NmzSRy10Au9uHLsYLfeV4zum7HclEjEm3FmUO_e_s/exec";
+
+    // In-memory state (same variables used throughout the app)
+    let projects = [];
+    let tasks = [];
+    let settings = { userName:"", userInitials:"", defaultDRI:"", defaultTech:"" };
+    let counters = { PRJ:0, GR:0, IT:0, AP:0 };
+
+    async function apiGet(params = {}) {
+      const url = new URL(API_URL);
+      Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, v));
+      const res = await fetch(url.toString(), { method: "GET" });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.message || "API error");
+      return json.data;
+    }
+
+    async function apiPost(body = {}) {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(body)
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.message || "API error");
+      return json.data;
+    }
+
+    async function loadAll() {
+      const data = await apiGet({ action: "readAll" });
+      projects = Array.isArray(data.projects) ? data.projects : [];
+      tasks = Array.isArray(data.tasks) ? data.tasks : [];
+      settings = data.settings || settings;
+      counters = data.counters || counters;
+    }
+
+    // Save full state (simple + reliable)
+    async function persistAll() {
+      await apiPost({
+        action: "saveAll",
+        projects,
+        tasks,
+        settings,
+        counters
+      });
+    }
+
+/***********************
+     * Project Number Generation
+     ***********************/
+    function generateProjectNumber(type) {
+      counters[type] = (counters[type] || 0) + 1;
+      
+      if (type === "PRJ") {
+        const year = new Date().getFullYear();
+        const num = String(counters[type]).padStart(3, '0');
+        return `PRJ-${year}-${num}`;
+      } else {
+        const num = String(counters[type]).padStart(3, '0');
+        return `${type}-${num}`;
+      }
+    }
+
+/***********************
+     * Helpers
+     ***********************/
+    function todayISO() {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function isOverdue(task) { return !task.completed && task.dueDate < todayISO(); }
+    function isDueToday(task) { return task.dueDate === todayISO(); }
+
+    function fmtDate(iso) {
+      if (!iso) return "—";
+      return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    }
+
+    function safeText(v) { return (v ?? "").toString(); }
+
+    function statusSlug(status) {
+      return String(status || "")
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9\-]/g, "");
+    }
+
+    function normalizeProjectStatus(raw) {
+      const s = String(raw || "").toLowerCase().trim();
+      if (s === "active" || s === "in progress") return "Ongoing";
+      if (s === "pending") return "Not Started";
+      if (s === "on hold" || s === "on-hold" || s === "hold") return "On-hold";
+      if (s === "cancelled" || s === "canceled" || s === "cancel") return "Cancelled";
+      if (s === "delayed" || s === "delay") return "Delayed";
+      if (s === "completed" || s === "done") return "Completed";
+      if (s === "not started" || s === "not-started") return "Not Started";
+      if (s === "ongoing") return "Ongoing";
+      return raw ? String(raw) : "Not Started";
+    }
+
+
+    function initialsFromName(name) {
+      const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+      if (!parts.length) return "";
+      const first = parts[0]?.[0] || "";
+      const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] || "") : "";
+      return (first + last).toUpperCase();
+    }
+
+    function ensureValidData() {
+      if (!Array.isArray(projects)) projects = [];
+      if (!Array.isArray(tasks)) tasks = [];
+
+      // Normalize / backfill project fields
+      projects = projects.map(p => ({
+        ...p,
+        status: normalizeProjectStatus(p.status),
+        priority: p.priority || "Medium",
+        requestor: p.requestor || "",
+        milestonesSummary: p.milestonesSummary || ""
+      }));
+
+      // Normalize / backfill task fields + drop tasks referencing missing projects
+      const projectIds = new Set(projects.map(p => p.id));
+      tasks = tasks
+        .filter(t => projectIds.has(t.projectId))
+        .map(t => ({ ...t, type: t.type || "Task" }));
+    }
+
+    function syncSidebarUser() {
+      const nameEl = document.getElementById("userNameDisplay");
+      const avatarEl = document.getElementById("userAvatarDisplay");
+
+      const nm = settings.userName || "";
+      const init = settings.userInitials || initialsFromName(nm) || "";
+
+      if (nameEl) nameEl.textContent = nm;
+      if (avatarEl) avatarEl.textContent = init;
+    }
+
+    function buildHoverTasksHTML(projectId) {
+      const project = projects.find(p => p.id === projectId);
+      const projectNumber = project ? project.projectNumber : "";
+      
+      const list = tasks
+        .filter(t => t.projectId === projectId)
+        .sort((a,b) => (a.dueDate > b.dueDate ? 1 : -1))
+        .slice(0, 3);
+
+      if (!list.length) {
+        return `
+          <div class="project-hover-tasks">
+            <div class="hover-title">Tasks preview ${projectNumber ? `(${projectNumber})` : ''}</div>
+            <div class="hover-task"><span>No tasks yet</span><span></span></div>
+          </div>`;
+      }
+
+      return `
+        <div class="project-hover-tasks">
+          <div class="hover-title">Tasks preview ${projectNumber ? `(${projectNumber})` : ''}</div>
+          ${list.map(t => `
+            <div class="hover-task">
+              <span><strong>${t.completed ? "✓" : "•"}</strong> ${safeText(t.title)}</span>
+              <span>${fmtDate(t.dueDate)}</span>
+            </div>
+          `).join("")}
+        </div>`;
+    }
+
+/***********************
+     * Projects Page (CRUD)
+     ***********************/
+    function getActiveProjectsAdminFilter() {
+      const btn = document.querySelector("#projects-admin-filters .filter-btn.active[data-project-filter]");
+      return btn ? btn.getAttribute("data-project-filter") : "all";
+    }
+
+    function renderProjectsAdmin(filter = "all") {
+      const container = document.getElementById("projects-admin-container");
+      if (!container) return;
+
+      const list = (filter === "all")
+        ? projects
+        : projects.filter(p => p.status === filter);
+
+      if (!list.length) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">📁</div>
+            <div class="empty-text">No projects found.</div>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = list.map(p => {
+        const statusClass = `status-${statusSlug(p.status)}`;
+        const statusText = safeText(p.status);
+
+        const projectTasks = tasks.filter(t => t.projectId === p.id);
+        const done = projectTasks.filter(t => t.completed).length;
+        const total = projectTasks.length;
+        const pct = total ? Math.round((done / total) * 100) : 0;
+
+        return `
+          <div class="project-item" data-project-id="${p.id}">
+            <div class="project-header">
+              <div>
+                <div class="project-number">${safeText(p.projectNumber)}</div>
+                <div class="project-name">${safeText(p.name)}</div>
+                <div class="project-client">👤 ${safeText(p.client) || "—"}</div>
+                <div class="project-client">🧾 Requestor: ${safeText(p.requestor) || "—"}</div>
+              </div>
+              <div class="project-status ${statusClass}">${statusText}</div>
+            </div>
+
+            <div class="project-description">${safeText(p.description)}</div>
+            <div class="project-description" style="margin-top:6px; color: var(--text-muted);"><strong>Milestones:</strong> ${safeText(p.milestonesSummary) || "—"}</div>
+
+            <div class="project-meta">
+              <div class="meta-item"><span>📅</span><span>Due: ${fmtDate(p.dueDate)}</span></div>
+              <div class="meta-item"><span>💰</span><span>${safeText(p.budget) || "—"}</span></div>
+              <div class="meta-item"><span>🔥</span><span>Priority: ${safeText(p.priority) || "Medium"}</span></div>
+              <div class="meta-item"><span>🧑‍💼</span><span>DRI: ${safeText(p.dri) || "—"}</span></div>
+              <div class="meta-item"><span>🧰</span><span>Tech: ${safeText(p.tech) || "—"}</span></div>
+            </div>
+
+            <div class="project-progress">
+              <div class="progress-info">
+                <span class="progress-tasks">Tasks: ${done}/${total}</span>
+                <span class="progress-percent">${pct}%</span>
+              </div>
+              <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+            </div>
+
+            <div class="task-actions">
+              <button class="icon-btn" data-project-action="edit" type="button"><span>✏️</span><span>Edit</span></button>
+              <button class="icon-btn" data-project-action="delete" type="button"><span>🗑️</span><span>Delete</span></button>
+              <button class="icon-btn" data-project-action="tasks" type="button"><span>✅</span><span>View Tasks</span></button>
+            </div>
+
+            ${buildHoverTasksHTML(p.id)}
+          </div>
+        `;
+      }).join("");
+    }
+
+/***********************
+     * Modals: Project create/edit
+     ***********************/
+    const projectModal = document.getElementById("project-modal");
+    let editingProjectId = null;
+
+    function openProjectModal(projectId = null) {
+      editingProjectId = projectId;
+
+      const title = document.getElementById("project-modal-title");
+      title.textContent = projectId ? "Edit Project" : "New Project";
+
+      const p = projectId ? projects.find(x => x.id === projectId) : null;
+
+      let projectType = "PRJ";
+      if (p && p.projectNumber) {
+        if (p.projectNumber.startsWith("GR-")) projectType = "GR";
+        else if (p.projectNumber.startsWith("IT-")) projectType = "IT";
+        else if (p.projectNumber.startsWith("AP-")) projectType = "AP";
+      }
+
+      document.getElementById("pm-type").value = projectType;
+      document.getElementById("pm-name").value = p?.name || "";
+      document.getElementById("pm-client").value = p?.client || "";
+      document.getElementById("pm-status").value = p?.status ? normalizeProjectStatus(p.status) : "Not Started";
+      document.getElementById("pm-requestor").value = p?.requestor || "";
+      document.getElementById("pm-priority").value = p?.priority || "Medium";
+      document.getElementById("pm-milestones").value = p?.milestonesSummary || "";
+      document.getElementById("pm-start").value = p?.startDate || "";
+      document.getElementById("pm-due").value = p?.dueDate || "";
+      document.getElementById("pm-budget").value = p?.budget || "";
+      document.getElementById("pm-progress").value = (p?.progress ?? 0);
+      document.getElementById("pm-dri").value = p?.dri || "";
+      document.getElementById("pm-tech").value = p?.tech || "";
+      document.getElementById("pm-desc").value = p?.description || "";
+
+      projectModal.classList.add("show");
+    }
+
+    function closeProjectModal() {
+      projectModal.classList.remove("show");
+      editingProjectId = null;
+    }
+
+    document.getElementById("pm-cancel").addEventListener("click", closeProjectModal);
+    projectModal.addEventListener("click", (e) => { if (e.target === projectModal) closeProjectModal(); });
+
+    document.getElementById("pm-save").addEventListener("click", function() {
+      const name = document.getElementById("pm-name").value.trim();
+      if (!name) return alert("Project name is required.");
+
+      const type = document.getElementById("pm-type").value;
+      
+      const payload = {
+        name,
+        client: document.getElementById("pm-client").value.trim(),
+        requestor: document.getElementById("pm-requestor").value.trim(),
+        priority: document.getElementById("pm-priority").value,
+        milestonesSummary: document.getElementById("pm-milestones").value.trim(),
+        status: document.getElementById("pm-status").value,
+        startDate: document.getElementById("pm-start").value,
+        dueDate: document.getElementById("pm-due").value,
+        budget: document.getElementById("pm-budget").value.trim(),
+        progress: Number(document.getElementById("pm-progress").value || 0),
+        dri: document.getElementById("pm-dri").value.trim(),
+        tech: document.getElementById("pm-tech").value.trim(),
+        description: document.getElementById("pm-desc").value.trim(),
+      };
+
+      if (editingProjectId) {
+        projects = projects.map(p => p.id === editingProjectId ? { ...p, ...payload } : p);
+      } else {
+        const projectNumber = generateProjectNumber(type);
+        const newId = Date.now();
+        projects.unshift({ id: newId, projectNumber, ...payload });
+      }
+
+      persistAll();
+      closeProjectModal();
+
+      populateProjectDropdowns();
+      renderProjectsAdmin(getActiveProjectsAdminFilter());
+      renderProjects(getActiveProjectFilter());
+      updateProjectStats();
+      renderDashboard();
+    });
+
+
+async function initProjects() {
+  await loadAll();
+  ensureValidData();
+  renderProjectsAdmin(getActiveProjectsAdminFilter());
+  syncSidebarUser?.(); // harmless if exists
+}
+document.querySelectorAll("#projects-admin-filters .filter-btn").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll("#projects-admin-filters .filter-btn").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    renderProjectsAdmin(getActiveProjectsAdminFilter());
+  });
+});
+document.getElementById("projects-add-btn")?.addEventListener("click", ()=>openProjectModal(null));
+
+// Card actions: edit/delete/tasks
+document.addEventListener("click", async (e)=>{
+  const actionBtn = e.target.closest("[data-project-action]");
+  if (!actionBtn) return;
+  const action = actionBtn.getAttribute("data-project-action");
+  const card = actionBtn.closest(".project-item[data-project-id]");
+  const pid = card?.getAttribute("data-project-id");
+  if (!pid) return;
+
+  if (action === "tasks") {
+    localStorage.setItem('selectedProjectId', pid);
+    alert('Selected project saved. Go to the Tasks page (via Google Sites navigation) to view its tasks.');
+    return;
+  }
+  if (action === "edit") {
+    openProjectModal(pid);
+    return;
+  }
+  if (action === "delete") {
+    const proj = projects.find(p=>p.id===pid);
+    const ok = confirm(`Delete project ${proj?.projectNumber || ""}? This will also remove its tasks.`);
+    if (!ok) return;
+    // remove tasks for project
+    tasks = tasks.filter(t=>t.projectId !== pid);
+    projects = projects.filter(p=>p.id !== pid);
+    await persistAll();
+    renderProjectsAdmin(getActiveProjectsAdminFilter());
+  }
+});
+
+// Wire modal buttons already in extracted section:
+initProjects();
+
+  </script>
+</body>
+</html>

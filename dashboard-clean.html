@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>IT PMO Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+
+:root{
+  --primary-blue:#4169E1;
+  --bg-light:#F8F9FC;
+  --text-dark:#1A1D2E;
+  --text-muted:#6B7280;
+  --border-color:#E5E7EB;
+  --white:#FFFFFF;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.05);
+  --shadow-md:0 4px 12px rgba(0,0,0,.08);
+  --shadow-lg:0 10px 30px rgba(0,0,0,.10);
+  --stat-blue-bg:#EBF4FF;
+  --stat-green-bg:#D1FAE5;
+  --stat-orange-bg:#FEF3C7;
+  --stat-purple-bg:#EDE9FE;
+  --green:#22c55e;
+  --yellow:#f59e0b;
+  --red:#ef4444;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:'IBM Plex Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+  background:var(--bg-light);
+  color:var(--text-dark);
+}
+.embed-wrap{ max-width:1180px; margin:0 auto; padding:16px; }
+.header{ margin-bottom:16px; }
+.header-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; }
+.header h2{ font-family:'Sora',sans-serif; font-size:26px; margin:0; }
+.header p{ margin:6px 0 0; color:var(--text-muted); }
+.header-actions{ display:flex; gap:10px; flex-wrap:wrap; }
+.btn{
+  padding:10px 14px;
+  border-radius:10px;
+  font-size:14px;
+  font-weight:700;
+  cursor:pointer;
+  border:none;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+.btn-secondary{ background:var(--white); color:var(--text-dark); border:1px solid var(--border-color); }
+.btn-secondary:hover{ background:var(--bg-light); }
+.btn-primary{ background:var(--primary-blue); color:#fff; }
+.btn-primary:hover{ background:#3557CC; }
+.section-card{
+  background:var(--white);
+  border:1px solid var(--border-color);
+  border-radius:14px;
+  box-shadow:var(--shadow-sm);
+  padding:16px;
+}
+.filters-bar{ display:flex; gap:10px; flex-wrap:wrap; margin:14px 0; }
+.filter-btn{
+  padding:8px 12px;
+  border:1px solid var(--border-color);
+  background:var(--white);
+  border-radius:10px;
+  cursor:pointer;
+  font-weight:700;
+}
+.filter-btn.active{ background:var(--primary-blue); color:#fff; border-color:var(--primary-blue); }
+
+.projects-list{ display:grid; gap:14px; }
+.project-item{
+  background:var(--white);
+  border:1px solid var(--border-color);
+  border-radius:14px;
+  padding:16px;
+  box-shadow:var(--shadow-sm);
+}
+.project-header{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+.project-number{ font-size:13px; color:var(--primary-blue); font-weight:800; margin-bottom:4px; }
+.project-name{ font-family:'Sora',sans-serif; font-size:18px; font-weight:800; margin:0 0 2px; }
+.project-client{ color:var(--text-muted); font-size:13px; }
+.project-description{ color:var(--text-muted); font-size:13px; margin-top:10px; }
+.project-meta{ display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--text-muted); margin-top:10px; }
+.meta-item{ display:flex; gap:6px; align-items:center; }
+.project-status{ padding:4px 10px; border-radius:999px; font-size:12px; font-weight:900; text-transform:uppercase; white-space:nowrap; }
+.status-not-started{ background:#dbeafe; color:#1e40af; }
+.status-ongoing{ background:#fef3c7; color:#92400e; }
+.status-on-hold{ background:#ffedd5; color:#9a3412; }
+.status-cancelled{ background:#fee2e2; color:#991b1b; }
+.status-delayed{ background:#f3f4f6; color:#374151; }
+.status-completed{ background:#dcfce7; color:#166534; }
+
+.progress-bar{ height:8px; background:var(--bg-light); border-radius:999px; overflow:hidden; margin-top:10px; }
+.progress-fill{ height:100%; background:linear-gradient(90deg,var(--primary-blue),#5B8DEE); }
+
+.empty-state{ text-align:center; padding:44px 14px; }
+.empty-icon{ font-size:48px; opacity:.25; margin-bottom:8px; }
+.empty-text{ color:var(--text-muted); }
+
+.modal-backdrop{
+  position:fixed; inset:0; background:rgba(0,0,0,.35);
+  display:none; align-items:center; justify-content:center;
+  padding:18px; z-index:9999;
+}
+.modal-backdrop.show{ display:flex; }
+.modal{
+  width:min(720px,100%);
+  background:var(--white);
+  border:1px solid var(--border-color);
+  border-radius:14px;
+  box-shadow:var(--shadow-lg);
+  padding:16px;
+}
+.modal h3{ margin:0 0 10px; font-family:'Sora',sans-serif; }
+.modal .row{ display:grid; gap:12px; grid-template-columns:1fr 1fr; }
+.modal label{ display:block; margin:10px 0 6px; font-size:12px; font-weight:800; color:var(--text-muted); }
+.modal input, .modal select, .modal textarea{
+  width:100%;
+  padding:10px 12px;
+  border:1px solid var(--border-color);
+  border-radius:10px;
+}
+.modal textarea{ resize:vertical; min-height:72px; }
+.modal-footer{ display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap; margin-top:12px; }
+@media (max-width:720px){ .modal .row{ grid-template-columns:1fr; } }
+
+.dash2-wrap{ max-width: 1180px; margin: 0 auto; }
+    .dash2-header{ display:flex; align-items:flex-start; gap:12px; margin-bottom: 18px; }
+    .dash2-logo{
+    .dash2-title h1{
+    .dash2-title p{ margin:0; color: var(--text-muted); font-size: 13px; }
+    .dash2-cards{
+    .dash2-card{
+    .dash2-card .label{ color:var(--text-muted); font-size: 12px; margin-bottom: 8px; }
+    .dash2-card .value{
+    .dash2-card .sub{ font-size: 12px; color: var(--text-muted); }
+    .dash2-pill{
+    .dash2-sub-red{ color: var(--red); }
+    .dash2-grid2{
+    .dash2-card h2{
+    .dash2-chartBox{ height: 260px; }
+    .dash2-tableHead{
+    .dash2-controls{ display:flex; gap:10px; align-items:center; }
+    .dash2-input,
+    .dash2-select{
+    .dash2-select{ min-width: 150px; }
+    .dash2-tableWrap{ overflow:auto; }
+    table.dash2-table{ width:100%; border-collapse: collapse; font-size: 13px; }
+    table.dash2-table thead th{
+    table.dash2-table tbody td{
+    .dash2-idLink{ color:#2563eb; text-decoration:none; font-weight: 650; }
+    .dash2-desc{
+    .dash2-tag{
+    .dash2-tag.critical{ background:#fee2e2; color:#991b1b; border-color:#fecaca; }
+    .dash2-tag.high{ background:#ffedd5; color:#9a3412; border-color:#fed7aa; }
+    .dash2-tag.medium{ background:#fef3c7; color:#92400e; border-color:#fde68a; }
+    .dash2-tag.low{ background:#dcfce7; color:#166534; border-color:#bbf7d0; }
+    .dash2-tag.status.notstarted{ background:#dbeafe; color:#1e40af; border-color:#bfdbfe; }
+    .dash2-tag.status.ongoing{ background:#fef3c7; color:#92400e; border-color:#fde68a; }
+    .dash2-tag.status.onhold{ background:#ffedd5; color:#9a3412; border-color:#fed7aa; }
+    .dash2-tag.status.delayed{ background:#f3f4f6; color:#374151; border-color:#e5e7eb; }
+    .dash2-tag.status.cancelled{ background:#fee2e2; color:#991b1b; border-color:#fecaca; }
+    .dash2-tag.status.completed{ background:#dcfce7; color:#166534; border-color:#bbf7d0; }
+    tr.dash2-row{ cursor:pointer; }
+    tr.dash2-row:hover{ background:#f8fafc; }
+    @media (max-width: 980px){
+      .dash2-cards{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .dash2-grid2{ grid-template-columns: 1fr; }
+      .dash2-controls{ width:100%; flex-wrap:wrap; justify-content:flex-start; }
+      .dash2-input{ min-width: 100%; }
+      .dash2-select{ min-width: 180px; }
+      .dash2-desc{ max-width: 100%; }
+      table.dash2-table{ min-width: 980px; }
+  </style>
+</head>
+<body>
+  <div class="embed-wrap">
+<div class="dash2-wrap">
+          <div class="dash2-header">
+            <div class="dash2-logo" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M12 3l9 5-9 5-9-5 9-5Z" stroke="white" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M3 12l9 5 9-5" stroke="white" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M3 17l9 5 9-5" stroke="white" stroke-width="2" stroke-linejoin="round"/>
+              </svg>
+            </div>
+
+            <div class="dash2-title" style="flex:1;">
+              <h1>Project Dashboard</h1>
+              <p>Overview of all active and completed projects</p>
+            </div>
+
+            <div class="header-actions"><span id="dashLastUpdated" style="align-self:center;font-size:12px;color:var(--text-muted);">Last updated: —</span><button class="btn btn-secondary" id="dashRefreshBtn" type="button"><span>🔄</span><span>Refresh</span></button>
+              <button class="btn btn-secondary" id="view-all-tasks-btn"><span>✓</span><span>View All Tasks</span></button>
+              <button class="btn btn-primary" id="new-project-btn"><span>➕</span><span>New Project</span></button>
+            </div>
+          </div>
+
+          <div class="dash2-cards">
+            <div class="dash2-card">
+              <div class="dash2-pill" title="Total Projects">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M4 7h16M4 12h16M4 17h16" stroke="#2563eb" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="label">Total Projects</div>
+              <div class="value" id="dash2TotalProjects">0</div>
+              <div class="sub dash2-sub-red" id="dash2CompletionRate">0% completion rate</div>
+            </div>
+
+            <div class="dash2-card">
+              <div class="dash2-pill" title="Completed">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M20 6 9 17l-5-5" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="label">Completed</div>
+              <div class="value" id="dash2CompletedCount">0</div>
+              <div class="sub">Projects finished</div>
+            </div>
+
+            <div class="dash2-card">
+              <div class="dash2-pill" title="In Progress">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 8v5l3 3" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0 Z" stroke="#2563eb" stroke-width="2"/>
+                </svg>
+              </div>
+              <div class="label">In Progress</div>
+              <div class="value" id="dash2InProgressCount">0</div>
+              <div class="sub">Active work</div>
+            </div>
+
+            <div class="dash2-card">
+              <div class="dash2-pill" title="Blocked">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 9v4" stroke="#2563eb" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M12 17h.01" stroke="#2563eb" stroke-width="3" stroke-linecap="round"/>
+                  <path d="M10.3 4.3a2 2 0 0 1 3.4 0l8 14A2 2 0 0 1 20 21H4a2 2 0 0 1-1.7-2.7l8-14Z" stroke="#2563eb" stroke-width="2" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="label">Blocked</div>
+              <div class="value" id="dash2BlockedCount">0</div>
+              <div class="sub">Needs attention</div>
+            </div>
+          </div>
+
+          <div class="dash2-grid2">
+            <div class="dash2-card">
+              <h2>Status Distribution</h2>
+              <div class="dash2-chartBox">
+                <canvas id="dash2StatusChart"></canvas>
+              </div>
+            </div>
+
+            <div class="dash2-card">
+              <h2>Priority Breakdown</h2>
+              <div class="dash2-chartBox">
+                <canvas id="dash2PriorityChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="dash2-card">
+            <div class="dash2-tableHead">
+              <h2 style="margin:0;">All Projects</h2>
+              <div class="dash2-controls">
+                <input id="dash2SearchInput" class="dash2-input" placeholder="Search projects..." />
+                <select id="dash2StatusFilter" class="dash2-select">
+                  <option value="All">All Status</option>
+                  <option value="Not Started">Not Started</option>
+                  <option value="Ongoing">Ongoing</option>
+                  <option value="On-hold">On-hold</option>
+                  <option value="Delayed">Delayed</option>
+                  <option value="Cancelled">Cancelled</option>
+                  <option value="Completed">Completed</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="dash2-tableWrap">
+              <table class="dash2-table">
+                <thead>
+                  <tr>
+                    <th style="width:110px;">Project No.</th>
+                    <th>Project Name</th>
+                    <th style="width:130px;">Department</th>
+                    <th style="width:90px;">Priority</th>
+                    <th style="width:110px;">Status</th>
+                    <th style="width:140px;">DRI</th>
+                    <th style="width:220px;">Technology</th>
+                    <th style="width:130px;">Completion Date</th>
+                  </tr>
+                </thead>
+                <tbody id="dash2ProjectsBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+  </div>
+
+  <script>
+/***********************
+     * Google Sheets storage layer (Apps Script Web App)
+     * Replace API_URL with your deployed Apps Script Web App URL
+     ***********************/
+    const API_URL = "https://script.google.com/macros/s/AKfycbxUzc1tDAQnfK1NPN2xR_hrfe8NmzSRy10Au9uHLsYLfeV4zum7HclEjEm3FmUO_e_s/exec";
+
+    // In-memory state (same variables used throughout the app)
+    let projects = [];
+    let tasks = [];
+    let settings = { userName:"", userInitials:"", defaultDRI:"", defaultTech:"" };
+    let counters = { PRJ:0, GR:0, IT:0, AP:0 };
+
+    async function apiGet(params = {}) {
+      const url = new URL(API_URL);
+      Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, v));
+      const res = await fetch(url.toString(), { method: "GET" });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.message || "API error");
+      return json.data;
+    }
+
+    async function apiPost(body = {}) {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(body)
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.message || "API error");
+      return json.data;
+    }
+
+    async function loadAll() {
+      const data = await apiGet({ action: "readAll" });
+      projects = Array.isArray(data.projects) ? data.projects : [];
+      tasks = Array.isArray(data.tasks) ? data.tasks : [];
+      settings = data.settings || settings;
+      counters = data.counters || counters;
+    }
+
+    // Save full state (simple + reliable)
+    async function persistAll() {
+      await apiPost({
+        action: "saveAll",
+        projects,
+        tasks,
+        settings,
+        counters
+      });
+    }
+
+/***********************
+     * Project Number Generation
+     ***********************/
+    function generateProjectNumber(type) {
+      counters[type] = (counters[type] || 0) + 1;
+      
+      if (type === "PRJ") {
+        const year = new Date().getFullYear();
+        const num = String(counters[type]).padStart(3, '0');
+        return `PRJ-${year}-${num}`;
+      } else {
+        const num = String(counters[type]).padStart(3, '0');
+        return `${type}-${num}`;
+      }
+    }
+
+/***********************
+     * Helpers
+     ***********************/
+    function todayISO() {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function isOverdue(task) { return !task.completed && task.dueDate < todayISO(); }
+    function isDueToday(task) { return task.dueDate === todayISO(); }
+
+    function fmtDate(iso) {
+      if (!iso) return "—";
+      return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    }
+
+    function safeText(v) { return (v ?? "").toString(); }
+
+    function statusSlug(status) {
+      return String(status || "")
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9\-]/g, "");
+    }
+
+    function normalizeProjectStatus(raw) {
+      const s = String(raw || "").toLowerCase().trim();
+      if (s === "active" || s === "in progress") return "Ongoing";
+      if (s === "pending") return "Not Started";
+      if (s === "on hold" || s === "on-hold" || s === "hold") return "On-hold";
+      if (s === "cancelled" || s === "canceled" || s === "cancel") return "Cancelled";
+      if (s === "delayed" || s === "delay") return "Delayed";
+      if (s === "completed" || s === "done") return "Completed";
+      if (s === "not started" || s === "not-started") return "Not Started";
+      if (s === "ongoing") return "Ongoing";
+      return raw ? String(raw) : "Not Started";
+    }
+
+
+    function initialsFromName(name) {
+      const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+      if (!parts.length) return "";
+      const first = parts[0]?.[0] || "";
+      const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] || "") : "";
+      return (first + last).toUpperCase();
+    }
+
+    function ensureValidData() {
+      if (!Array.isArray(projects)) projects = [];
+      if (!Array.isArray(tasks)) tasks = [];
+
+      // Normalize / backfill project fields
+      projects = projects.map(p => ({
+        ...p,
+        status: normalizeProjectStatus(p.status),
+        priority: p.priority || "Medium",
+        requestor: p.requestor || "",
+        milestonesSummary: p.milestonesSummary || ""
+      }));
+
+      // Normalize / backfill task fields + drop tasks referencing missing projects
+      const projectIds = new Set(projects.map(p => p.id));
+      tasks = tasks
+        .filter(t => projectIds.has(t.projectId))
+        .map(t => ({ ...t, type: t.type || "Task" }));
+    }
+
+    function syncSidebarUser() {
+      const nameEl = document.getElementById("userNameDisplay");
+      const avatarEl = document.getElementById("userAvatarDisplay");
+
+      const nm = settings.userName || "";
+      const init = settings.userInitials || initialsFromName(nm) || "";
+
+      if (nameEl) nameEl.textContent = nm;
+      if (avatarEl) avatarEl.textContent = init;
+    }
+
+    function buildHoverTasksHTML(projectId) {
+      const project = projects.find(p => p.id === projectId);
+      const projectNumber = project ? project.projectNumber : "";
+      
+      const list = tasks
+        .filter(t => t.projectId === projectId)
+        .sort((a,b) => (a.dueDate > b.dueDate ? 1 : -1))
+        .slice(0, 3);
+
+      if (!list.length) {
+        return `
+          <div class="project-hover-tasks">
+            <div class="hover-title">Tasks preview ${projectNumber ? `(${projectNumber})` : ''}</div>
+            <div class="hover-task"><span>No tasks yet</span><span></span></div>
+          </div>`;
+      }
+
+      return `
+        <div class="project-hover-tasks">
+          <div class="hover-title">Tasks preview ${projectNumber ? `(${projectNumber})` : ''}</div>
+          ${list.map(t => `
+            <div class="hover-task">
+              <span><strong>${t.completed ? "✓" : "•"}</strong> ${safeText(t.title)}</span>
+              <span>${fmtDate(t.dueDate)}</span>
+            </div>
+          `).join("")}
+        </div>`;
+    }
+
+/***********************
+     * Google Sheets storage layer (Apps Script Web App)
+     * Replace API_URL with your deployed Apps Script Web App URL
+     ***********************/
+    const API_URL = "https://script.google.com/macros/s/AKfycbxUzc1tDAQnfK1NPN2xR_hrfe8NmzSRy10Au9uHLsYLfeV4zum7HclEjEm3FmUO_e_s/exec";
+
+    // In-memory state (same variables used throughout the app)
+    let projects = [];
+    let tasks = [];
+    let settings = { userName:"", userInitials:"", defaultDRI:"", defaultTech:"" };
+    let counters = { PRJ:0, GR:0, IT:0, AP:0 };
+
+    async function apiGet(params = {}) {
+      const url = new URL(API_URL);
+      Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, v));
+      const res = await fetch(url.toString(), { method: "GET" });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.message || "API error");
+      return json.data;
+    }
+
+    async function apiPost(body = {}) {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(body)
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.message || "API error");
+      return json.data;
+    }
+
+    async function loadAll() {
+      const data = await apiGet({ action: "readAll" });
+      projects = Array.isArray(data.projects) ? data.projects : [];
+      tasks = Array.isArray(data.tasks) ? data.tasks : [];
+      settings = data.settings || settings;
+      counters = data.counters || counters;
+    }
+
+    // Save full state (simple + reliable)
+    async function persistAll() {
+      await apiPost({
+        action: "saveAll",
+        projects,
+        tasks,
+        settings,
+        counters
+      });
+    }
+
+/***********************
+     * Project Number Generation
+     ***********************/
+    function generateProjectNumber(type) {
+      counters[type] = (counters[type] || 0) + 1;
+      
+      if (type === "PRJ") {
+        const year = new Date().getFullYear();
+        const num = String(counters[type]).padStart(3, '0');
+        return `PRJ-${year}-${num}`;
+      } else {
+        const num = String(counters[type]).padStart(3, '0');
+        return `${type}-${num}`;
+      }
+    }
+
+/***********************
+     * Helpers
+     ***********************/
+    function todayISO() {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      return `${yyyy}-${mm}-${dd}`;
+    }
+
+    function isOverdue(task) { return !task.completed && task.dueDate < todayISO(); }
+    function isDueToday(task) { return task.dueDate === todayISO(); }
+
+    function fmtDate(iso) {
+      if (!iso) return "—";
+      return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    }
+
+    function safeText(v) { return (v ?? "").toString(); }
+
+    function statusSlug(status) {
+      return String(status || "")
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^a-z0-9\-]/g, "");
+    }
+
+    function normalizeProjectStatus(raw) {
+      const s = String(raw || "").toLowerCase().trim();
+      if (s === "active" || s === "in progress") return "Ongoing";
+      if (s === "pending") return "Not Started";
+      if (s === "on hold" || s === "on-hold" || s === "hold") return "On-hold";
+      if (s === "cancelled" || s === "canceled" || s === "cancel") return "Cancelled";
+      if (s === "delayed" || s === "delay") return "Delayed";
+      if (s === "completed" || s === "done") return "Completed";
+      if (s === "not started" || s === "not-started") return "Not Started";
+      if (s === "ongoing") return "Ongoing";
+      return raw ? String(raw) : "Not Started";
+    }
+
+
+    function initialsFromName(name) {
+      const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
+      if (!parts.length) return "";
+      const first = parts[0]?.[0] || "";
+      const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] || "") : "";
+      return (first + last).toUpperCase();
+    }
+
+    function ensureValidData() {
+      if (!Array.isArray(projects)) projects = [];
+      if (!Array.isArray(tasks)) tasks = [];
+
+      // Normalize / backfill project fields
+      projects = projects.map(p => ({
+        ...p,
+        status: normalizeProjectStatus(p.status),
+        priority: p.priority || "Medium",
+        requestor: p.requestor || "",
+        milestonesSummary: p.milestonesSummary || ""
+      }));
+
+      // Normalize / backfill task fields + drop tasks referencing missing projects
+      const projectIds = new Set(projects.map(p => p.id));
+      tasks = tasks
+        .filter(t => projectIds.has(t.projectId))
+        .map(t => ({ ...t, type: t.type || "Task" }));
+    }
+
+    function syncSidebarUser() {
+      const nameEl = document.getElementById("userNameDisplay");
+      const avatarEl = document.getElementById("userAvatarDisplay");
+
+      const nm = settings.userName || "";
+      const init = settings.userInitials || initialsFromName(nm) || "";
+
+      if (nameEl) nameEl.textContent = nm;
+      if (avatarEl) avatarEl.textContent = init;
+    }
+
+    function buildHoverTasksHTML(projectId) {
+      const project = projects.find(p => p.id === projectId);
+      const projectNumber = project ? project.projectNumber : "";
+      
+      const list = tasks
+        .filter(t => t.projectId === projectId)
+        .sort((a,b) => (a.dueDate > b.dueDate ? 1 : -1))
+        .slice(0, 3);
+
+      if (!list.length) {
+        return `
+          <div class="project-hover-tasks">
+            <div class="hover-title">Tasks preview ${projectNumber ? `(${projectNumber})` : ''}</div>
+            <div class="hover-task"><span>No tasks yet</span><span></span></div>
+          </div>`;
+      }
+
+      return `
+        <div class="project-hover-tasks">
+          <div class="hover-title">Tasks preview ${projectNumber ? `(${projectNumber})` : ''}</div>
+          ${list.map(t => `
+            <div class="hover-task">
+              <span><strong>${t.completed ? "✓" : "•"}</strong> ${safeText(t.title)}</span>
+              <span>${fmtDate(t.dueDate)}</span>
+            </div>
+          `).join("")}
+        </div>`;
+    }
+
+/***********************
+     * Dashboard
+     ***********************/
+    let dash2StatusChart = null;
+    let dash2PriorityChart = null;
+
+    function dash2GetCss(varName){
+      return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+    }
+
+    function dash2StatusLabel(project) {
+      return normalizeProjectStatus(project.status);
+    }
+
+    function dash2PriorityLabel(project) {
+      return safeText(project.priority || "Medium");
+    }
+
+    function dash2BuildProjects() {
+      return projects.map(p => ({
+        id: safeText(p.projectNumber),
+        name: safeText(p.name),
+        desc: safeText(p.description),
+        department: safeText(p.client || "General"),
+        priority: dash2PriorityLabel(p),
+        status: dash2StatusLabel(p),
+        dri: safeText(p.dri || settings.defaultDRI || ""),
+        tech: safeText(p.tech || settings.defaultTech || ""),
+        completionDate: p.dueDate ? fmtDate(p.dueDate) : "TBD",
+        _rawId: p.id
+      }));
+    }
+
+    function dash2CountsBy(list, field){
+      const out = {};
+      for (const p of list){
+        const k = p[field] ?? "Unknown";
+        out[k] = (out[k] || 0) + 1;
+      }
+      return out;
+    }
+
+    function dash2TagClassPriority(p){ return String(p || "").toLowerCase(); }
+    function dash2TagClassStatus(s){ return String(s || "").toLowerCase().replace(/[^a-z0-9]/g, ""); }
+
+    function dash2EscapeHtml(str){
+      return String(str ?? "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function dash2ProjectMatches(p, search, status){
+      const s = (search || "").trim().toLowerCase();
+      const text = [p.id, p.name, p.desc, p.department, p.priority, p.status, p.dri, p.tech, p.completionDate]
+        .join(" ").toLowerCase();
+
+      const matchSearch = s === "" || text.includes(s);
+      const matchStatus = status === "All" || p.status === status;
+      return matchSearch && matchStatus;
+    }
+
+    function dash2RenderSummary(list){
+      const total = list.length;
+      const byStatus = dash2CountsBy(list, "status");
+
+      const completed = byStatus["Completed"] || 0;
+      const ongoing = byStatus["Ongoing"] || 0;
+      const attention = (byStatus["Delayed"] || 0) + (byStatus["On-hold"] || 0);
+
+      const elTotal = document.getElementById("dash2TotalProjects");
+      const elCompleted = document.getElementById("dash2CompletedCount");
+      const elInProgress = document.getElementById("dash2InProgressCount");
+      const elBlocked = document.getElementById("dash2BlockedCount");
+      const elRate = document.getElementById("dash2CompletionRate");
+      if (!elTotal) return;
+
+      elTotal.textContent = total;
+      elCompleted.textContent = completed;
+      elInProgress.textContent = ongoing;
+      elBlocked.textContent = attention;
+
+      const rate = total === 0 ? 0 : Math.round((completed / total) * 100);
+      elRate.textContent = `${rate}% completion rate`;
+    }
+
+    function dash2MakeStatusChart(list){
+      const statusColors = {
+        "Not Started": "#3b82f6",
+        "Ongoing": "#facc15",
+        "On-hold": "#fb923c",
+        "Delayed": "#9ca3af",
+        "Cancelled": "#ef4444",
+        "Completed": "#22c55e"
+      };
+
+      const byStatus = dash2CountsBy(list, "status");
+      const labels = ["Not Started","Ongoing","On-hold","Delayed","Cancelled","Completed"];
+      const data = labels.map(l => byStatus[l] || 0);
+      const bg = labels.map(l => statusColors[l]);
+
+      const canvas = document.getElementById("dash2StatusChart");
+      if (!canvas) return;
+
+      if (dash2StatusChart) dash2StatusChart.destroy();
+
+      dash2StatusChart = new Chart(canvas, {
+        type: "doughnut",
+        data: { labels, datasets: [{ data, backgroundColor: bg, borderWidth: 0 }] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "65%",
+          plugins: {
+            legend: { position: "bottom", labels: { boxWidth: 10, boxHeight: 10 } },
+            tooltip: { callbacks: { label: (c) => `${c.label}: ${c.raw}` } }
+          }
+        }
+      });
+    }
+
+    function dash2MakePriorityChart(list){
+      const priorityOrder = ["Critical", "High", "Medium", "Low"];
+      const priorityColors = {
+        "Critical": "#ef4444",
+        "High": "#f97316",
+        "Medium": "#f59e0b",
+        "Low": "#22c55e"
+      };
+
+      const byPriority = dash2CountsBy(list, "priority");
+      const labels = priorityOrder.slice();
+      const data = labels.map(l => byPriority[l] || 0);
+      const bg = labels.map(l => priorityColors[l]);
+
+      const canvas = document.getElementById("dash2PriorityChart");
+      if (!canvas) return;
+
+      if (dash2PriorityChart) dash2PriorityChart.destroy();
+
+      dash2PriorityChart = new Chart(canvas, {
+        type: "bar",
+        data: { labels, datasets: [{ label: "Projects", data, backgroundColor: bg, borderRadius: 8 }] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: "y",
+          scales: {
+            x: { grid: { display: false }, ticks: { precision: 0 } },
+            y: { grid: { display: false } }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    function dash2RenderTable(list){
+      const body = document.getElementById("dash2ProjectsBody");
+      const searchInput = document.getElementById("dash2SearchInput");
+      const statusFilter = document.getElementById("dash2StatusFilter");
+      if (!body || !searchInput || !statusFilter) return;
+
+      const search = searchInput.value || "";
+      const status = statusFilter.value;
+
+      const filtered = list.filter(p => dash2ProjectMatches(p, search, status));
+
+      body.innerHTML = filtered.map(p => `
+        <tr data-dash-project="${p._rawId}" class="dash2-row">
+          <td><a class="dash2-idLink" href="#" onclick="return false;">${dash2EscapeHtml(p.id)}</a></td>
+          <td>
+            <div style="font-weight:650;">${dash2EscapeHtml(p.name)}</div>
+            <div class="dash2-desc">${dash2EscapeHtml(p.desc)}</div>
+          </td>
+          <td>${dash2EscapeHtml(p.department)}</td>
+          <td><span class="dash2-tag ${dash2TagClassPriority(p.priority)}">${dash2EscapeHtml(p.priority)}</span></td>
+          <td><span class="dash2-tag status ${dash2TagClassStatus(p.status)}">${dash2EscapeHtml(p.status)}</span></td>
+          <td>${dash2EscapeHtml(p.dri)}</td>
+          <td>${dash2EscapeHtml(p.tech)}</td>
+          <td>${dash2EscapeHtml(p.completionDate)}</td>
+        </tr>
+      `).join("");
+
+      dash2RenderSummary(list);
+      dash2MakeStatusChart(list);
+      dash2MakePriorityChart(list);
+    }
+
+    function dash2WireEventsOnce(){
+      const searchInput = document.getElementById("dash2SearchInput");
+      const statusFilter = document.getElementById("dash2StatusFilter");
+      if (!searchInput || !statusFilter) return;
+
+      if (searchInput.dataset.bound === "1") return;
+      searchInput.dataset.bound = "1";
+
+      const rerender = () => {
+        const list = dash2BuildProjects();
+        dash2RenderTable(list);
+      };
+
+      searchInput.addEventListener("input", rerender);
+      statusFilter.addEventListener("change", rerender);
+    }
+
+    function renderDashboard() {
+      const list = dash2BuildProjects();
+      dash2WireEventsOnce();
+      dash2RenderTable(list);
+    }
+
+
+function setLastUpdated() {
+  const el = document.getElementById("dashLastUpdated");
+  if (!el) return;
+  const now = new Date();
+  el.textContent = "Last updated: " + now.toLocaleString();
+}
+
+async function refreshDashboard() {
+  try {
+    await loadAll();
+    ensureValidData();
+    renderDashboard();
+    setLastUpdated();
+  } catch (e) {
+    console.error(e);
+    const el = document.getElementById("dashLastUpdated");
+    if (el) el.textContent = "Last updated: error";
+  }
+}
+
+document.getElementById("dashRefreshBtn")?.addEventListener("click", refreshDashboard);
+
+// Auto refresh every 60s when tab is visible
+setInterval(() => {
+  if (document.visibilityState === "visible") refreshDashboard();
+}, 60000);
+
+refreshDashboard();
+
+  </script>
+</body>
+</html>
